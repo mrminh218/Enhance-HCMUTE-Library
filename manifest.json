@@ -1,11 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Enhance HCMUTE Library",
-  "version": "2.1",
-  "description": "Dark mode, mở khoá chuột phải và tải PDF từ thư viện số.",
+  "version": "3.0",
+  "description": "Trợ lý học tập: Tải tài liệu, OCR và hỗ trợ giao diện cho Thư viện số HCMUTE.",
   "permissions": ["activeTab", "scripting"],
   "host_permissions": ["*://thuvienso.hcmute.edu.vn/*"],
-  
   "content_scripts": [
     {
       "matches": ["*://thuvienso.hcmute.edu.vn/doc_view/web/view.php*"],
@@ -19,7 +18,6 @@
       "run_at": "document_end"
     }
   ],
-  
   "web_accessible_resources": [
     {
       "resources": ["injector.js"],
