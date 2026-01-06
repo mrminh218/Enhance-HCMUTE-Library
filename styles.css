@@ -2,46 +2,55 @@
     position: fixed;
     top: 100px;
     right: 20px;
-    width: 180px;
+    width: 200px; /* Rộng hơn xíu cho đẹp */
     background: #fff;
     border: 1px solid #ccc;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     border-radius: 8px;
-    z-index: 99999;
+    z-index: 2147483647; /* Max z-index để luôn nằm trên cùng */
     font-family: Arial, sans-serif;
     overflow: hidden;
+    user-select: none; /* Không cho bôi đen text khi đang kéo */
 }
 
 .hcmute-header {
-    background: #007bff;
+    background: #007bff; /* Màu xanh thương hiệu */
     color: white;
-    padding: 10px;
+    padding: 12px;
     font-weight: bold;
     text-align: center;
     font-size: 14px;
+    cursor: move; /* Quan trọng: Biến con trỏ thành mũi tên 4 chiều */
 }
 
 .hcmute-btn {
     display: block;
     width: 100%;
-    padding: 10px;
+    padding: 12px;
     border: none;
     background: white;
     text-align: left;
     cursor: pointer;
     border-bottom: 1px solid #eee;
     font-size: 13px;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    color: #333;
 }
 
 .hcmute-btn:hover {
-    background: #f0f0f0;
+    background: #f8f9fa;
+    padding-left: 15px; /* Hiệu ứng đẩy nhẹ khi hover */
+}
+
+.hcmute-btn:disabled {
+    color: #999;
+    cursor: not-allowed;
 }
 
 .hcmute-footer {
     font-size: 10px;
     text-align: center;
-    color: #999;
-    padding: 5px;
-    background: #f9f9f9;
+    color: #aaa;
+    padding: 8px;
+    background: #f1f1f1;
 }
