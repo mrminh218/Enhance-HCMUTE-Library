@@ -1,10 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Enhance HCMUTE Library",
-  "version": "3.0",
-  "description": "Trợ lý học tập: Tải tài liệu, OCR và hỗ trợ giao diện cho Thư viện số HCMUTE.",
-  "permissions": ["activeTab", "scripting"],
+  "name": "Enhance HCMUTE Library V6",
+  "version": "6.1",
+  "description": "Tải tài liệu PDF chuẩn tên file (Sử dụng Memory Cache).",
+  
+  "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["*://thuvienso.hcmute.edu.vn/*"],
+  "icons": {
+    "128": "icon.png"
+  },
   "content_scripts": [
     {
       "matches": ["*://thuvienso.hcmute.edu.vn/doc_view/web/view.php*"],
@@ -13,8 +17,11 @@
       "run_at": "document_start"
     },
     {
-      "matches": ["*://thuvienso.hcmute.edu.vn/document/*"],
-      "js": ["redirector.js"],
+      "matches": [
+        "*://thuvienso.hcmute.edu.vn/doc/*",
+        "*://thuvienso.hcmute.edu.vn/document/*"
+      ],
+      "js": ["tracker.js"],
       "run_at": "document_end"
     }
   ],

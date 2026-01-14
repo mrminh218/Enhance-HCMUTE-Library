@@ -1,159 +1,110 @@
-// content_script.js - Version 3.0
-
-// 1. Tiêm injector (Giữ nguyên)
+// content_script.js - Version 6.0 (Storage Mode)
 const script = document.createElement('script');
 script.src = chrome.runtime.getURL('injector.js');
 script.onload = function() { this.remove(); };
 (document.head || document.documentElement).appendChild(script);
 
 let pdfData = null;
+let finalFileName = "Tai_lieu_HCMUTE.pdf";
 
-// --- TÍNH NĂNG 1: ĐẶT TÊN FILE THÔNG MINH ---
-function getSmartFilename() {
-    let filename = "Tai_lieu_HCMUTE";
+// --- 1. TRA CỨU TÊN FILE TỪ STORAGE ---
+function fetchFileName() {
+    // Lấy ID từ URL view.php (vd: view.php?id=1006995...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
 
-    // Thử lấy tiêu đề từ thẻ title của trang web
-    if (document.title) {
-        filename = document.title;
-    }
-    
-    // Thử tìm thẻ tiêu đề trong nội dung (thường là .page-title hoặc h1)
-    // Bạn có thể inspect web trường để tìm class chính xác hơn
-    const h1 = document.querySelector('h1') || document.querySelector('.page-title');
-    if (h1 && h1.innerText.trim().length > 0) {
-        filename = h1.innerText.trim();
-    }
-
-    // Làm sạch tên file (Xóa ký tự cấm trong Windows/Linux: / : * ? " < > |)
-    filename = filename.replace(/[/\\?%*:|"<>]/g, '-');
-    // Xóa bớt khoảng trắng thừa
-    filename = filename.replace(/\s+/g, ' ').trim();
-
-    return filename + ".pdf";
-}
-
-// --- TÍNH NĂNG 2: XỬ LÝ KÉO THẢ (DRAGGABLE) ---
-function makeDraggable(el) {
-    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    const header = el.querySelector(".hcmute-header");
-
-    if (header) {
-        // Nếu có header, chỉ cho phép kéo khi nắm vào header
-        header.onmousedown = dragMouseDown;
-    } else {
-        // Nếu không thì nắm đâu cũng kéo được
-        el.onmousedown = dragMouseDown;
-    }
-
-    function dragMouseDown(e) {
-        e.preventDefault();
-        // Lấy vị trí chuột ban đầu
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        document.onmouseup = closeDragElement;
-        document.onmousemove = elementDrag;
-    }
-
-    function elementDrag(e) {
-        e.preventDefault();
-        // Tính toán vị trí mới
-        pos1 = pos3 - e.clientX;
-        pos2 = pos4 - e.clientY;
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        // Gán vị trí mới cho element
-        el.style.top = (el.offsetTop - pos2) + "px";
-        el.style.left = (el.offsetLeft - pos1) + "px";
-        
-        // Xóa thuộc tính 'right' để tránh xung đột với 'left' khi kéo
-        el.style.right = 'auto'; 
-    }
-
-    function closeDragElement() {
-        // Dừng kéo khi thả chuột
-        document.onmouseup = null;
-        document.onmousemove = null;
+    if (id) {
+        chrome.storage.local.get(['doc_' + id], function(result) {
+            const savedName = result['doc_' + id];
+            if (savedName) {
+                console.log("[Content] Tìm thấy tên trong bộ nhớ:", savedName);
+                finalFileName = savedName.replace(/[/\\?%*:|"<>]/g, '-').trim() + ".pdf";
+                
+                // Cập nhật lại nút bấm nếu dữ liệu PDF đã có sẵn
+                updateDownloadButton();
+            }
+        });
     }
 }
 
-// --- XỬ LÝ DỮ LIỆU PDF ---
-window.addEventListener('PDF_INTERCEPTED', function(e) {
-    pdfData = e.detail;
+// Gọi hàm lấy tên ngay khi trang tải
+fetchFileName();
+
+// --- 2. CẬP NHẬT GIAO DIỆN ---
+function updateDownloadButton() {
     const btn = document.getElementById('hcmute-download-btn');
-    if (btn) {
-        // Lấy tên file để hiển thị cho ngầu
-        const smartName = getSmartFilename();
-        // Cắt ngắn nếu tên quá dài để vừa nút bấm
-        const displayName = smartName.length > 20 ? smartName.substring(0, 17) + "..." : smartName;
+    if (btn && pdfData) {
+        const displayName = finalFileName.replace('.pdf', '');
+        const shortName = displayName.length > 20 ? displayName.substring(0, 18) + "..." : displayName;
         
-        btn.innerHTML = `📥 Tải về: <b>${displayName}</b>`;
-        btn.title = "Tên đầy đủ: " + smartName; // Hover vào sẽ thấy tên full
+        btn.innerHTML = `📥 Tải: <b>${shortName}</b>`;
+        btn.title = finalFileName;
         btn.style.backgroundColor = "#28a745";
         btn.style.color = "white";
         btn.disabled = false;
     }
+}
+
+// --- 3. XỬ LÝ KÉO THẢ ---
+function makeDraggable(el) {
+    const header = el.querySelector(".hcmute-header");
+    header.onmousedown = function(e) {
+        e.preventDefault();
+        el.style.right = 'auto'; el.style.bottom = 'auto';
+        let startX = e.clientX, startY = e.clientY;
+        document.onmousemove = function(e) {
+            el.style.top = (el.offsetTop - (startY - e.clientY)) + "px";
+            el.style.left = (el.offsetLeft - (startX - e.clientX)) + "px";
+            startX = e.clientX; startY = e.clientY;
+        };
+        document.onmouseup = function() { document.onmousemove = null; document.onmouseup = null; };
+    };
+}
+
+// --- 4. NHẬN DỮ LIỆU PDF ---
+window.addEventListener('PDF_INTERCEPTED', function(e) {
+    pdfData = e.detail;
+    updateDownloadButton();
 });
 
-// --- UI CHÍNH ---
+// --- 5. TẠO UI ---
 function createUI() {
     if (document.getElementById('hcmute-tool-panel')) return;
-
     const container = document.createElement('div');
     container.id = 'hcmute-tool-panel';
+    container.style.cssText = "position: fixed; top: 100px; right: 20px; z-index: 999999;";
     container.innerHTML = `
-        <div class="hcmute-header">Enhance Library v3.0</div>
-        <button id="hcmute-download-btn" class="hcmute-btn" disabled>⏳ Đang đợi dữ liệu...</button>
+        <div class="hcmute-header" style="cursor: grab;">HCMUTE Library V6</div>
+        <button id="hcmute-download-btn" class="hcmute-btn" disabled>⏳ Đang quét dữ liệu...</button>
         <button id="hcmute-darkmode-btn" class="hcmute-btn">🌙 Chế độ tối</button>
-        <div class="hcmute-footer">Kéo thả tôi đi đâu tùy thích!</div>
     `;
     document.body.appendChild(container);
-
-    // Kích hoạt tính năng kéo thả cho panel
     makeDraggable(container);
 
-    // Logic nút Download
     document.getElementById('hcmute-download-btn').addEventListener('click', () => {
-        if (!pdfData) {
-            alert("Chưa có dữ liệu! Hãy F5 lại trang.");
-            return;
-        }
-        try {
-            const blob = new Blob([pdfData], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            // Sử dụng tên file thông minh
-            a.download = getSmartFilename();
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        } catch (err) {
-            alert("Lỗi tải file: " + err);
-        }
+        if (!pdfData) return alert("Chưa có dữ liệu! F5 lại trang.");
+        const blob = new Blob([pdfData], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = finalFileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
     });
-
-    // Logic Dark Mode
-    let isDark = false;
-    document.getElementById('hcmute-darkmode-btn').addEventListener('click', () => {
-        isDark = !isDark;
-        const btn = document.getElementById('hcmute-darkmode-btn');
-        const root = document.documentElement;
-        
-        if (isDark) {
-            root.style.filter = "invert(1) hue-rotate(180deg)";
-            btn.innerText = "☀️ Chế độ sáng";
-            
-            // Fix ảnh bị âm bản
+    
+    // Darkmode (Giữ nguyên logic cũ)
+    document.getElementById('hcmute-darkmode-btn').addEventListener('click', function() {
+        const isDark = document.documentElement.style.filter === "";
+        document.documentElement.style.filter = isDark ? "invert(1) hue-rotate(180deg)" : "";
+        if(isDark) {
             const style = document.createElement('style');
-            style.id = "dark-mode-fix";
-            style.textContent = `img, video, iframe, canvas, #hcmute-tool-panel { filter: invert(1) hue-rotate(180deg); }`;
+            style.id = "dark-fix";
+            style.textContent = "img, video, iframe, canvas, #hcmute-tool-panel { filter: invert(1) hue-rotate(180deg); }";
             document.head.appendChild(style);
         } else {
-            root.style.filter = "";
-            btn.innerText = "🌙 Chế độ tối";
-            const style = document.getElementById("dark-mode-fix");
-            if(style) style.remove();
+            document.getElementById("dark-fix")?.remove();
         }
     });
 }
